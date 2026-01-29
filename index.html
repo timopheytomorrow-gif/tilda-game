@@ -2,8 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
-<title>Mini Game</title>
+<meta name="viewport"
+      content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+<title>Run to Manicure</title>
+
 <style>
 html, body {
   margin: 0;
@@ -22,6 +24,17 @@ canvas {
 <canvas id="game"></canvas>
 
 <script>
+// ================= НАСТРОЙКИ =================
+const HERO_IMG =
+  "https://r2.syntx.ai/user_599754215192909656/uploaded/9ee5a1bc820fcaca3e30b61ff6dc9df2_d6e46b1b-34b3-423a-b5ce-a8113e245454.png";
+
+const BOTTLE_IMG =
+  "https://r2.syntx.ai/user_599754215192909656/uploaded/3761af60127d2d19f2921b9f12575ee0_2e5a645e-1764-4641-ad58-800cf5a84aa8.png";
+
+const BG_IMG =
+  "https://r2.syntx.ai/user_599754215192909656/uploaded/f4c459320df30922c87a73e164db4eec_4c71ac01-c20a-4d41-9c8f-c670d3518600.png";
+
+// ================= CANVAS =================
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
@@ -32,31 +45,70 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-let player = {
-  x: 50,
-  y: canvas.height - 120,
-  w: 50,
+// ================= ИЗОБРАЖЕНИЯ =================
+const heroImg = new Image();
+heroImg.src = HERO_IMG;
+
+const bottleImg = new Image();
+bottleImg.src = BOTTLE_IMG;
+
+const bgImg = new Image();
+bgImg.src = BG_IMG;
+
+// ================= ИГРОВАЯ ЛОГИКА =================
+const HERO_FRAMES = 2;
+const HERO_SRC_W = 1671 / 2;
+const HERO_SRC_H = 981;
+
+const player = {
+  x: 40,
+  y: 0,
+  w: 60,
   h: 80,
   vy: 0,
   jumpCount: 0
 };
 
-const groundY = () => canvas.height - 40;
-const gravity = 0.8;
-const maxJump = 2;
+const GRAVITY = 0.8;
+const JUMP_FORCE = -14;
+const MAX_JUMP = 2;
+const SPEED = 4;
 
+let obstacles = [];
+let frame = 0;
+let animFrame = 0;
+let animTimer = 0;
+
+function groundY() {
+  return canvas.height - 90;
+}
+
+// ================= УПРАВЛЕНИЕ =================
 function jump() {
-  if (player.jumpCount < maxJump) {
-    player.vy = -14;
+  if (player.jumpCount < MAX_JUMP) {
+    player.vy = JUMP_FORCE;
     player.jumpCount++;
   }
 }
-
 document.addEventListener('touchstart', jump);
 document.addEventListener('mousedown', jump);
 
+// ================= ПРЕПЯТСТВИЯ =================
+function spawnBottle() {
+  const big = Math.random() < 0.4;
+  obstacles.push({
+    x: canvas.width + 40,
+    y: groundY() - (big ? 70 : 50),
+    w: big ? 36 : 26,
+    h: big ? 70 : 50
+  });
+}
+
+setInterval(spawnBottle, 1800);
+
+// ================= ОБНОВЛЕНИЕ =================
 function update() {
-  player.vy += gravity;
+  player.vy += GRAVITY;
   player.y += player.vy;
 
   if (player.y + player.h > groundY()) {
@@ -64,29 +116,64 @@ function update() {
     player.vy = 0;
     player.jumpCount = 0;
   }
+
+  obstacles.forEach(o => o.x -= SPEED);
+  obstacles = obstacles.filter(o => o.x + o.w > 0);
+
+  animTimer += 16;
+  if (animTimer > 150) {
+    animFrame = 1 - animFrame;
+    animTimer = 0;
+  }
+}
+
+// ================= РИСОВАНИЕ =================
+function drawBackground() {
+  if (bgImg.complete) {
+    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+  }
+}
+
+function drawRoad() {
+  ctx.fillStyle = '#333';
+  ctx.fillRect(0, groundY(), canvas.width, canvas.height);
+}
+
+function drawPlayer() {
+  ctx.drawImage(
+    heroImg,
+    animFrame * HERO_SRC_W, 0,
+    HERO_SRC_W, HERO_SRC_H,
+    player.x, player.y,
+    player.w, player.h
+  );
+}
+
+function drawObstacles() {
+  obstacles.forEach(o => {
+    ctx.drawImage(bottleImg, o.x, o.y, o.w, o.h);
+  });
 }
 
 function draw() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  // дорога
-  ctx.fillStyle = '#333';
-  ctx.fillRect(0, groundY(), canvas.width, 40);
-
-  // героиня
-  ctx.fillStyle = '#ff5a7a';
-  ctx.fillRect(player.x, player.y, player.w, player.h);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBackground();
+  drawRoad();
+  drawObstacles();
+  drawPlayer();
 }
 
+// ================= LOOP =================
 function loop() {
   update();
   draw();
   requestAnimationFrame(loop);
 }
 
+// ================= START =================
+player.y = groundY() - player.h;
 loop();
 </script>
 
 </body>
 </html>
-
