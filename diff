@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+<title>Mini Game</title>
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #111;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+canvas {
+  display: block;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+let player = {
+  x: 50,
+  y: canvas.height - 120,
+  w: 50,
+  h: 80,
+  vy: 0,
+  jumpCount: 0
+};
+
+const groundY = () => canvas.height - 40;
+const gravity = 0.8;
+const maxJump = 2;
+
+function jump() {
+  if (player.jumpCount < maxJump) {
+    player.vy = -14;
+    player.jumpCount++;
+  }
+}
+
+document.addEventListener('touchstart', jump);
+document.addEventListener('mousedown', jump);
+
+function update() {
+  player.vy += gravity;
+  player.y += player.vy;
+
+  if (player.y + player.h > groundY()) {
+    player.y = groundY() - player.h;
+    player.vy = 0;
+    player.jumpCount = 0;
+  }
+}
+
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // дорога
+  ctx.fillStyle = '#333';
+  ctx.fillRect(0, groundY(), canvas.width, 40);
+
+  // героиня
+  ctx.fillStyle = '#ff5a7a';
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
