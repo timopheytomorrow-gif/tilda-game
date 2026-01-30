@@ -118,10 +118,10 @@ let obstacleTimer = setInterval(spawnBottle, 1800);
 // ================= COLLISION =================
 function isColliding(a, b) {
   return (
-    a.x < b.x + b.w &&
-    a.x + a.w > b.x &&
-    a.y < b.y + b.h &&
-    a.y + a.h > b.y
+    a.x + 8 < b.x + b.w - 8 &&
+    a.x + a.w - 8 > b.x + 8 &&
+    a.y + 8 < b.y + b.h - 8 &&
+    a.y + a.h - 8 > b.y + 8
   );
 }
 
@@ -191,6 +191,25 @@ function draw() {
   drawObstacles();
   drawPlayer();
 
+      // DEBUG HITBOX
+ctx.strokeStyle = 'red';
+ctx.strokeRect(
+  player.x + 8,
+  player.y + 8,
+  player.w - 16,
+  player.h - 16
+);
+
+obstacles.forEach(o => {
+  ctx.strokeStyle = 'lime';
+  ctx.strokeRect(
+    o.x + 8,
+    o.y + 8,
+    o.w - 16,
+    o.h - 16
+  );
+});
+      
   if (gameOver) {
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
