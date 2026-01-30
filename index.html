@@ -14,9 +14,7 @@ html, body {
   overflow: hidden;
   touch-action: manipulation;
 }
-canvas {
-  display: block;
-}
+canvas { display:block; }
 </style>
 </head>
 <body>
@@ -24,15 +22,10 @@ canvas {
 <canvas id="game"></canvas>
 
 <script>
-// ================= НАСТРОЙКИ =================
-const HERO_IMG =
-  "https://r2.syntx.ai/user_599754215192909656/uploaded/9ee5a1bc820fcaca3e30b61ff6dc9df2_d6e46b1b-34b3-423a-b5ce-a8113e245454.png";
-
-const BOTTLE_IMG =
-  "https://r2.syntx.ai/user_599754215192909656/uploaded/3761af60127d2d19f2921b9f12575ee0_2e5a645e-1764-4641-ad58-800cf5a84aa8.png";
-
-const BG_IMG =
-  "https://r2.syntx.ai/user_599754215192909656/uploaded/f4c459320df30922c87a73e164db4eec_4c71ac01-c20a-4d41-9c8f-c670d3518600.png";
+// ================= ASSETS =================
+const HERO_IMG = "https://r2.syntx.ai/user_599754215192909656/uploaded/9ee5a1bc820fcaca3e30b61ff6dc9df2_d6e46b1b-34b3-423a-b5ce-a8113e245454.png";
+const BOTTLE_IMG = "https://r2.syntx.ai/user_599754215192909656/uploaded/3761af60127d2d19f2921b9f12575ee0_2e5a645e-1764-4641-ad58-800cf5a84aa8.png";
+const BG_IMG = "https://r2.syntx.ai/user_599754215192909656/uploaded/f4c459320df30922c87a73e164db4eec_4c71ac01-c20a-4d41-9c8f-c670d3518600.png";
 
 // ================= CANVAS =================
 const canvas = document.getElementById('game');
@@ -45,20 +38,22 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-// ================= ИЗОБРАЖЕНИЯ =================
-const heroImg = new Image();
-heroImg.src = HERO_IMG;
+// ================= IMAGES =================
+const heroImg = new Image(); heroImg.src = HERO_IMG;
+const bottleImg = new Image(); bottleImg.src = BOTTLE_IMG;
+const bgImg = new Image(); bgImg.src = BG_IMG;
 
-const bottleImg = new Image();
-bottleImg.src = BOTTLE_IMG;
-
-const bgImg = new Image();
-bgImg.src = BG_IMG;
-
-// ================= ИГРОВАЯ ЛОГИКА =================
-const HERO_FRAMES = 2;
+// ================= GAME =================
 const HERO_SRC_W = 1671 / 2;
 const HERO_SRC_H = 981;
+
+const GRAVITY = 0.8;
+const JUMP_FORCE = -14;
+const SPEED = 4;
+
+let gameOver = false;
+let animFrame = 0;
+let animTimer = 0;
 
 const player = {
   x: 40,
@@ -69,54 +64,51 @@ const player = {
   jumpCount: 0
 };
 
-const GRAVITY = 0.8;
-const JUMP_FORCE = -14;
-const MAX_JUMP = 2;
-const SPEED = 4;
-
 let obstacles = [];
-let gameOver = false;
-let animFrame = 0;
-let animTimer = 0;
 
 function groundY() {
   return canvas.height - 90;
 }
 
-// ================= УПРАВЛЕНИЕ =================
+// ================= INPUT =================
+let lastTap = 0;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const now = Date.now();
+  if (now - lastTap > 150 && !gameOver) {
+    jump();
+    lastTap = now;
+  }
+}, { passive:false });
+
+canvas.addEventListener('mousedown', e => {
+  e.preventDefault();
+  if (!gameOver) jump();
+});
+
+// ================= JUMP =================
 function jump() {
-  if (gameOver) return;
-  if (player.jumpCount < MAX_JUMP) {
+  if (player.jumpCount < 2) {
     player.vy = JUMP_FORCE;
     player.jumpCount++;
   }
 }
 
-// 👇 КЛЮЧЕВОЕ МЕСТО
-if ('ontouchstart' in window) {
-  document.addEventListener('touchstart', e => {
-    e.preventDefault();
-    jump();
-  }, { passive: false });
-} else {
-  document.addEventListener('mousedown', jump);
-}
-
-// ================= ПРЕПЯТСТВИЯ =================
+// ================= OBSTACLES =================
 function spawnBottle() {
   const big = Math.random() < 0.4;
   obstacles.push({
     x: canvas.width + 40,
     y: groundY() - (big ? 70 : 50),
     w: big ? 36 : 26,
-    h: big ? 70 : 50
+    h: big ? 70 : 50,
+    needJump: big ? 2 : 1
   });
 }
-
 let obstacleTimer = setInterval(spawnBottle, 1800);
 
 // ================= COLLISION =================
-function isColliding(a, b) {
+function hit(a, b) {
   return (
     a.x + 8 < b.x + b.w - 8 &&
     a.x + a.w - 8 > b.x + 8 &&
@@ -141,11 +133,12 @@ function update() {
   obstacles.forEach(o => o.x -= SPEED);
   obstacles = obstacles.filter(o => o.x + o.w > 0);
 
-  // ⚠️ столкновения
   obstacles.forEach(o => {
-    if (isColliding(player, o)) {
-      gameOver = true;
-      clearInterval(obstacleTimer);
+    if (hit(player, o)) {
+      if (player.jumpCount < o.needJump) {
+        gameOver = true;
+        clearInterval(obstacleTimer);
+      }
     }
   });
 
@@ -157,18 +150,19 @@ function update() {
 }
 
 // ================= DRAW =================
-function drawBackground() {
-  if (bgImg.complete) {
-    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-  }
-}
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-function drawRoad() {
+  if (bgImg.complete)
+    ctx.drawImage(bgImg,0,0,canvas.width,canvas.height);
+
   ctx.fillStyle = '#333';
   ctx.fillRect(0, groundY(), canvas.width, canvas.height);
-}
 
-function drawPlayer() {
+  obstacles.forEach(o => {
+    ctx.drawImage(bottleImg, o.x, o.y, o.w, o.h);
+  });
+
   ctx.drawImage(
     heroImg,
     animFrame * HERO_SRC_W, 0,
@@ -176,49 +170,16 @@ function drawPlayer() {
     player.x, player.y,
     player.w, player.h
   );
-}
 
-function drawObstacles() {
-  obstacles.forEach(o => {
-    ctx.drawImage(bottleImg, o.x, o.y, o.w, o.h);
-  });
-}
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackground();
-  drawRoad();
-  drawObstacles();
-  drawPlayer();
-
-      // DEBUG HITBOX
-ctx.strokeStyle = 'red';
-ctx.strokeRect(
-  player.x + 8,
-  player.y + 8,
-  player.w - 16,
-  player.h - 16
-);
-
-obstacles.forEach(o => {
-  ctx.strokeStyle = 'lime';
-  ctx.strokeRect(
-    o.x + 8,
-    o.y + 8,
-    o.w - 16,
-    o.h - 16
-  );
-});
-      
   if (gameOver) {
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = '#fff';
     ctx.font = '24px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('Опоздала на маникюр 😭', canvas.width / 2, canvas.height / 2);
+    ctx.fillText('Опоздала на маникюр 😭', canvas.width/2, canvas.height/2);
     ctx.font = '16px Arial';
-    ctx.fillText('Тапни, чтобы начать заново', canvas.width / 2, canvas.height / 2 + 30);
+    ctx.fillText('Тапни, чтобы начать заново', canvas.width/2, canvas.height/2+30);
   }
 }
 
@@ -230,10 +191,10 @@ function loop() {
 }
 
 // ================= RESTART =================
-document.addEventListener('touchstart', () => {
+canvas.addEventListener('touchstart', () => {
   if (gameOver) location.reload();
 });
-document.addEventListener('mousedown', () => {
+canvas.addEventListener('mousedown', () => {
   if (gameOver) location.reload();
 });
 
