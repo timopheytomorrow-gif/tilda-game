@@ -3,8 +3,8 @@
   <p id="introText">
     До маникюра осталось 3 минуты!<br>
     Помоги добежать вовремя 💅<br><br>
-    Маленький флакон — обычный прыжок<br>
-    Большой флакон — двойной прыжок
+    Тап — прыжок<br>
+    Два тапа — двойной прыжок
   </p>
   <button id="startBtn"
     style="padding:12px 26px;font-size:18px;border:0;border-radius:10px;background:#ad274c;color:#fff;">
@@ -12,7 +12,7 @@
   </button>
 
   <canvas id="game" width="360" height="640"
-    style="display:block;margin:20px auto;background:#111;border-radius:18px;border:3px solid #ad274c;">
+    style="display:block;margin:20px auto;border-radius:18px;border:3px solid #ad274c;">
   </canvas>
 </div>
 
@@ -30,8 +30,10 @@ const ctx = canvas.getContext("2d");
 const GRAVITY = 0.9;
 const JUMP_FORCE = -14;
 const SPEED = 4;
-const ROAD_OFFSET = 40;
 const MAX_JUMP = 2;
+
+/* ====== ВАЖНО: УРОВЕНЬ ДОРОГИ ====== */
+const ROAD_Y = canvas.height * 0.62; // уровень пунктирной полосы
 
 /* ====== СПРАЙТ ====== */
 const heroImg = new Image(); heroImg.src = HERO_IMG;
@@ -59,11 +61,12 @@ let score = 0;
 let gameStarted = false;
 let gameOver = false;
 
-/* ====== ФУНКЦИИ ====== */
+/* ====== ЛОГИЧЕСКАЯ ЗЕМЛЯ ====== */
 function groundY() {
-  return canvas.height - 120 - ROAD_OFFSET;
+  return ROAD_Y - player.h;
 }
 
+/* ====== ПРЫЖОК ====== */
 function jump() {
   if (!gameStarted || gameOver) return;
   if (player.jumpCount < MAX_JUMP) {
@@ -72,7 +75,7 @@ function jump() {
   }
 }
 
-/* ====== ВВОД ====== */
+/* ====== ВВОД (БЕЗ ДВОЕНИЯ) ====== */
 let lastTap = 0;
 canvas.addEventListener("touchstart", e => {
   e.preventDefault();
@@ -93,10 +96,9 @@ function spawnObstacle() {
   const big = Math.random() < 0.4;
   obstacles.push({
     x: canvas.width + 20,
-    y: groundY() - (big ? 70 : 50),
+    y: ROAD_Y - (big ? 70 : 50),
     w: big ? 40 : 26,
-    h: big ? 70 : 50,
-    big
+    h: big ? 70 : 50
   });
 }
 
@@ -127,7 +129,7 @@ function update() {
     player.jumpCount = 0;
   }
 
-  // Анимация ТОЛЬКО когда на земле
+  // анимация ТОЛЬКО на земле
   if (player.jumpCount === 0) {
     player.animTimer += 16;
     if (player.animTimer > 150) {
@@ -155,10 +157,6 @@ function draw() {
   if (bgImg.complete) {
     ctx.drawImage(bgImg,0,0,canvas.width,canvas.height);
   }
-
-  // дорога
-  ctx.fillStyle = "#222";
-  ctx.fillRect(0, groundY()+player.h, canvas.width, canvas.height);
 
   // препятствия
   obstacles.forEach(o => {
@@ -218,7 +216,9 @@ canvas.addEventListener("click", () => {
   }
 });
 
+/* ====== INIT ====== */
 player.y = groundY();
 loop();
 </script>
+
 
